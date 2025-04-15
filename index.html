@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Company Performance Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>📈 Company Performance Tracker</h1>
+    </header>
+
+    <section class="form-section">
+      <h2>📦 Add Product/Service</h2>
+      <div class="input-group">
+        <input type="text" id="productName" placeholder="Product/Service Name" />
+        <input type="number" id="productRevenue" placeholder="Revenue (₹)" />
+        <button onclick="addProduct()">➕ Add</button>
+      </div>
+      <ul id="productList" class="item-list"></ul>
+    </section>
+
+    <section class="form-section">
+      <h2>💸 Add Expense</h2>
+      <div class="input-group">
+        <input type="text" id="expenseType" placeholder="Expense Type" />
+        <input type="number" id="expenseAmount" placeholder="Amount (₹)" />
+        <button onclick="addExpense()">➕ Add</button>
+      </div>
+      <ul id="expenseList" class="item-list"></ul>
+    </section>
+
+    <section class="summary">
+      <h2>📊 Summary</h2>
+      <div class="summary-grid">
+        <p><strong>Total Revenue:</strong> ₹<span id="totalRevenue">0</span></p>
+        <p><strong>Total Expenses:</strong> ₹<span id="totalExpenses">0</span></p>
+        <p><strong>Net Profit:</strong> ₹<span id="netProfit">0</span></p>
+        <p><strong>Estimated Valuation (×5):</strong> ₹<span id="valuation">0</span></p>
+      </div>
+    </section>
+
+    <div class="action-button">
+      <button onclick="redirectToPerformance()" id="performanceBtn">📉 Calculate Performance</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Performance Analysis</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Header */
+    .performance-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .performance-header h1 {
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Analytics Section */
+    .analytics-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .metric-card {
+      background: #f7fafc;
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #2d3748;
+      margin: 0.5rem 0;
+    }
+
+    .metric-label {
+      color: #4a5568;
+      font-size: 0.9rem;
+    }
+
+    .metric-trend {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .metric-trend.positive { color: #48bb78; }
+    .metric-trend.negative { color: #f56565; }
+
+    /* Controls Section */
+    .controls-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0; /* Prevents overflow */
+    }
+
+    .control-group label {
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 0.25rem;
+    }
+
+    .control-group select,
+    .control-group input {
+      padding: 0.5rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .control-group .date-range {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .control-group .date-range input {
+      flex: 1;
+    }
+
+    .comparison-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+    }
+
+    .comparison-toggle input[type="checkbox"] {
+      width: 1.2rem;
+      height: 1.2rem;
+      margin: 0;
+    }
+
+    .export-buttons {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+
+    /* Charts Section */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .chart-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .chart-card h2 {
+      color: #4a5568;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+
+    /* Chart Controls */
+    .chart-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .chart-type-toggle {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .chart-type-toggle button {
+      padding: 0.5rem 1rem;
+      border: 2px solid #e2e8f0;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .chart-type-toggle button.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    /* Export Buttons */
+    .export-button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .export-button.csv { background: #48bb78; color: white; }
+    .export-button.pdf { background: #f56565; color: white; }
+    .export-button.excel { background: #4299e1; color: white; }
+
+    .export-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Navigation */
+    .back-button {
+      display: inline-block;
+      margin-top: 2rem;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: transform 0.2s ease;
+    }
+
+    .back-button:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .performance-header h1 { font-size: 2rem; }
+      .controls-section { 
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      .control-group {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="performance-header">
+      <h1>📈 Performance Analysis Dashboard</h1>
+    </header>
+
+    <div class="analytics-section">
+      <div class="metric-card">
+        <div class="metric-label">Revenue Growth Rate</div>
+        <div class="metric-value" id="growthRate">0%</div>
+        <div class="metric-trend" id="growthTrend"></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Operating Margin</div>
+        <div class="metric-value" id="operatingMargin">0%</div>
+        <div class="metric-trend" id="marginTrend"></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Expense Ratio</div>
+        <div class="metric-value" id="expenseRatio">0%</div>
+        <div class="metric-trend" id="ratioTrend"></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Forecasted Growth</div>
+        <div class="metric-value" id="forecastedGrowth">0%</div>
+        <div class="metric-trend" id="forecastTrend"></div>
+      </div>
+    </div>
+
+    <div class="controls-section">
+      <div class="control-group">
+        <label>Date Range</label>
+        <div class="date-range">
+          <input type="date" id="startDate">
+          <input type="date" id="endDate">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Product Filter</label>
+        <select id="productFilter">
+          <option value="all">All Products</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Expense Category</label>
+        <select id="expenseFilter">
+          <option value="all">All Categories</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Year Comparison</label>
+        <div class="comparison-toggle">
+          <input type="checkbox" id="yearComparison">
+          <span>Show Year-over-Year</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Export Data</label>
+        <div class="export-buttons">
+          <button class="export-button csv" onclick="exportData('csv')">📊 CSV</button>
+          <button class="export-button pdf" onclick="exportData('pdf')">📄 PDF</button>
+          <button class="export-button excel" onclick="exportData('excel')">📑 Excel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h2>Revenue by Product</h2>
+        <div class="chart-controls">
+          <div class="chart-type-toggle">
+            <button class="active" onclick="toggleChartType('barChart', 'bar')">Bar</button>
+            <button onclick="toggleChartType('barChart', 'line')">Line</button>
+          </div>
+          <div class="annotation-controls">
+            <button class="annotation-button add" onclick="addAnnotation('barChart')">📌 Add Annotation</button>
+            <button class="annotation-button clear" onclick="clearAnnotations('barChart')">🗑️ Clear</button>
+          </div>
+        </div>
+    <div class="chart-container">
+      <canvas id="barChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h2>Expense Distribution</h2>
+        <div class="chart-container">
+      <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h2>Revenue vs Expenses</h2>
+        <div class="chart-container">
+      <canvas id="doughnutChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h2>Profit Margin Analysis</h2>
+        <div class="chart-container">
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center;">
+      <a href="index.html" class="back-button">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script>
+    // Constants and Configuration
+    const CHART_COLORS = {
+      primary: 'rgba(102, 126, 234, 0.8)',
+      secondary: 'rgba(118, 75, 162, 0.8)',
+      success: 'rgba(72, 187, 120, 0.8)',
+      warning: 'rgba(245, 158, 11, 0.8)',
+      danger: 'rgba(239, 83, 80, 0.8)'
+    };
+
+    const CHART_BORDER_COLORS = {
+      primary: 'rgba(102, 126, 234, 1)',
+      success: 'rgba(72, 187, 120, 1)'
+    };
+
+    // Storage Keys
+    const STORAGE_KEYS = {
+      PRODUCTS: 'products',
+      EXPENSES: 'expenses',
+      PREFERENCES: 'dashboard_preferences',
+      CHART_CONFIGS: 'chart_configurations'
+    };
+
+    // Data Management
+    let products = [];
+    let expenses = [];
+    let charts = {};
+    let preferences = {
+      dateRange: {
+        start: '',
+        end: ''
+      },
+      filters: {
+        product: 'all',
+        expense: 'all'
+      },
+      yearComparison: false,
+      chartTypes: {
+        barChart: 'bar',
+        pieChart: 'pie',
+        doughnutChart: 'doughnut',
+        lineChart: 'line'
+      }
+    };
+
+    // Storage Management
+    function saveToStorage(key, data) {
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch (error) {
+        console.error(`Error saving to storage (${key}):`, error);
+      }
+    }
+
+    function loadFromStorage(key, defaultValue = null) {
+      try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+      } catch (error) {
+        console.error(`Error loading from storage (${key}):`, error);
+        return defaultValue;
+      }
+    }
+
+    // Initialize Data
+    function initializeData() {
+      products = loadFromStorage(STORAGE_KEYS.PRODUCTS, []);
+      expenses = loadFromStorage(STORAGE_KEYS.EXPENSES, []);
+      preferences = loadFromStorage(STORAGE_KEYS.PREFERENCES, preferences);
+      
+      // Apply saved preferences
+      applyPreferences();
+    }
+
+    function applyPreferences() {
+      // Apply date range
+      if (preferences.dateRange.start && preferences.dateRange.end) {
+        document.getElementById('startDate').value = preferences.dateRange.start;
+        document.getElementById('endDate').value = preferences.dateRange.end;
+      } else {
+        // Set default date range (last 6 months)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 6);
+        preferences.dateRange.start = startDate.toISOString().split('T')[0];
+        preferences.dateRange.end = endDate.toISOString().split('T')[0];
+        document.getElementById('startDate').value = preferences.dateRange.start;
+        document.getElementById('endDate').value = preferences.dateRange.end;
+      }
+
+      // Apply filters
+      document.getElementById('productFilter').value = preferences.filters.product;
+      document.getElementById('expenseFilter').value = preferences.filters.expense;
+      document.getElementById('yearComparison').checked = preferences.yearComparison;
+
+      // Apply chart types
+      Object.entries(preferences.chartTypes).forEach(([chartId, type]) => {
+        const chart = charts[chartId];
+        if (chart) {
+          chart.config.type = type;
+          chart.update();
+          
+          // Update button states
+          const buttons = document.querySelectorAll(`#${chartId}`).closest('.chart-card')
+            .querySelectorAll('.chart-type-toggle button');
+          buttons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.toLowerCase() === type) {
+              btn.classList.add('active');
+            }
+          });
+        }
+      });
+    }
+
+    // Event Listeners for Preferences
+    function setupPreferenceListeners() {
+      // Date range listeners
+      document.getElementById('startDate').addEventListener('change', (e) => {
+        preferences.dateRange.start = e.target.value;
+        saveToStorage(STORAGE_KEYS.PREFERENCES, preferences);
+      });
+
+      document.getElementById('endDate').addEventListener('change', (e) => {
+        preferences.dateRange.end = e.target.value;
+        saveToStorage(STORAGE_KEYS.PREFERENCES, preferences);
+      });
+
+      // Filter listeners
+      document.getElementById('productFilter').addEventListener('change', (e) => {
+        preferences.filters.product = e.target.value;
+        saveToStorage(STORAGE_KEYS.PREFERENCES, preferences);
+      });
+
+      document.getElementById('expenseFilter').addEventListener('change', (e) => {
+        preferences.filters.expense = e.target.value;
+        saveToStorage(STORAGE_KEYS.PREFERENCES, preferences);
+      });
+
+      // Year comparison listener
+      document.getElementById('yearComparison').addEventListener('change', (e) => {
+        preferences.yearComparison = e.target.checked;
+        saveToStorage(STORAGE_KEYS.PREFERENCES, preferences);
+      });
+    }
+
+    // Chart Configuration
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 20,
+            font: { family: "'Inter', sans-serif" }
+          }
+        }
+      }
+    };
+
+    // Initialize Charts
+    function initializeCharts() {
+    const productNames = products.map(p => p.name);
+    const productRevenues = products.map(p => p.revenue);
+    const expenseTypes = expenses.map(e => e.type);
+    const expenseAmounts = expenses.map(e => e.amount);
+      const totalRevenue = productRevenues.reduce((a, b) => a + b, 0);
+      const totalExpenses = expenseAmounts.reduce((a, b) => a + b, 0);
+      const profitMargin = ((totalRevenue - totalExpenses) / totalRevenue) * 100;
+
+      // Bar Chart
+      charts.barChart = new Chart(document.getElementById('barChart'), {
+        type: preferences.chartTypes.barChart,
+      data: {
+        labels: productNames,
+        datasets: [{
+          label: 'Revenue per Product',
+          data: productRevenues,
+            backgroundColor: CHART_COLORS.primary,
+            borderColor: CHART_BORDER_COLORS.primary,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...chartOptions,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => '₹' + value.toLocaleString() }
+            }
+          }
+        }
+      });
+
+      // Pie Chart
+      charts.pieChart = new Chart(document.getElementById('pieChart'), {
+        type: preferences.chartTypes.pieChart,
+      data: {
+        labels: expenseTypes,
+        datasets: [{
+          data: expenseAmounts,
+            backgroundColor: Object.values(CHART_COLORS),
+            borderColor: 'white',
+            borderWidth: 2
+        }]
+        },
+        options: chartOptions
+    });
+
+      // Doughnut Chart
+      charts.doughnutChart = new Chart(document.getElementById('doughnutChart'), {
+        type: preferences.chartTypes.doughnutChart,
+      data: {
+        labels: ['Total Revenue', 'Total Expenses'],
+        datasets: [{
+            data: [totalRevenue, totalExpenses],
+            backgroundColor: [CHART_COLORS.success, CHART_COLORS.danger],
+            borderColor: 'white',
+            borderWidth: 2
+          }]
+        },
+        options: chartOptions
+      });
+
+      // Line Chart
+      charts.lineChart = new Chart(document.getElementById('lineChart'), {
+        type: preferences.chartTypes.lineChart,
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+          datasets: [{
+            label: 'Profit Margin (%)',
+          data: [
+              profitMargin * 0.8,
+              profitMargin * 0.85,
+              profitMargin * 0.9,
+              profitMargin * 0.95,
+              profitMargin,
+              profitMargin * 1.05
+            ],
+            borderColor: CHART_BORDER_COLORS.success,
+            backgroundColor: 'rgba(72, 187, 120, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          ...chartOptions,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => value.toFixed(1) + '%' }
+            }
+          },
+          plugins: {
+            ...chartOptions.plugins,
+            tooltip: {
+              callbacks: {
+                label: context => `Profit Margin: ${context.parsed.y.toFixed(1)}%`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Chart Controls
+    function toggleChartType(chartId, type) {
+      const chart = charts[chartId];
+      if (chart) {
+        chart.config.type = type;
+        chart.update();
+        
+        // Update preferences
+        preferences.chartTypes[chartId] = type;
+        saveToStorage(STORAGE_KEYS.PREFERENCES, preferences);
+        
+        // Update button states
+        const buttons = document.querySelectorAll(`#${chartId}`).closest('.chart-card')
+          .querySelectorAll('.chart-type-toggle button');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+      }
+    }
+
+    // Metrics Update
+    function updateMetrics() {
+      const totalRevenue = products.reduce((sum, p) => sum + p.revenue, 0);
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      
+      // Growth Rate
+      const growthRate = ((totalRevenue - (totalRevenue * 0.8)) / (totalRevenue * 0.8)) * 100;
+      updateMetricElement('growthRate', growthRate.toFixed(1) + '%');
+      updateMetricElement('growthTrend', '↑ 12% vs last period', 'positive');
+
+      // Operating Margin
+      const operatingMargin = ((totalRevenue - totalExpenses) / totalRevenue) * 100;
+      updateMetricElement('operatingMargin', operatingMargin.toFixed(1) + '%');
+      updateMetricElement('marginTrend', '↑ 5% vs last period', 'positive');
+
+      // Expense Ratio
+      const expenseRatio = (totalExpenses / totalRevenue) * 100;
+      updateMetricElement('expenseRatio', expenseRatio.toFixed(1) + '%');
+      updateMetricElement('ratioTrend', '↓ 3% vs last period', 'positive');
+
+      // Forecasted Growth
+      const forecastedGrowth = growthRate * 1.2;
+      updateMetricElement('forecastedGrowth', forecastedGrowth.toFixed(1) + '%');
+      updateMetricElement('forecastTrend', 'Based on current trends');
+    }
+
+    function updateMetricElement(id, value, trendClass = '') {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+        if (trendClass) {
+          element.className = `metric-trend ${trendClass}`;
+        }
+      }
+    }
+
+    // Data Export
+    function exportData(format) {
+      const data = {
+        products,
+        expenses,
+        summary: {
+          totalRevenue: products.reduce((sum, p) => sum + p.revenue, 0),
+          totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
+          profitMargin: calculateProfitMargin()
+        }
+      };
+
+      switch(format) {
+        case 'csv': exportToCSV(data); break;
+        case 'pdf': exportToPDF(data); break;
+        case 'excel': exportToExcel(data); break;
+      }
+    }
+
+    function calculateProfitMargin() {
+      const totalRevenue = products.reduce((sum, p) => sum + p.revenue, 0);
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      return ((totalRevenue - totalExpenses) / totalRevenue) * 100;
+    }
+
+    function exportToCSV(data) {
+      let csv = 'Category,Name,Amount\n';
+      
+      data.products.forEach(p => {
+        csv += `Product,${p.name},${p.revenue}\n`;
+      });
+      
+      data.expenses.forEach(e => {
+        csv += `Expense,${e.type},${e.amount}\n`;
+      });
+      
+      csv += `\nSummary\n`;
+      csv += `Total Revenue,${data.summary.totalRevenue}\n`;
+      csv += `Total Expenses,${data.summary.totalExpenses}\n`;
+      csv += `Profit Margin,${data.summary.profitMargin.toFixed(2)}%\n`;
+
+      downloadFile(csv, 'performance_data.csv', 'text/csv');
+    }
+
+    function exportToPDF(data) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(16);
+      doc.text('Performance Report', 20, 20);
+      
+      doc.setFontSize(12);
+      let y = 40;
+      
+      // Products
+      doc.text('Products:', 20, y);
+      y += 10;
+      data.products.forEach(p => {
+        doc.text(`${p.name}: ₹${p.revenue.toLocaleString()}`, 30, y);
+        y += 10;
+      });
+      
+      // Expenses
+      y += 10;
+      doc.text('Expenses:', 20, y);
+      y += 10;
+      data.expenses.forEach(e => {
+        doc.text(`${e.type}: ₹${e.amount.toLocaleString()}`, 30, y);
+        y += 10;
+      });
+      
+      // Summary
+      y += 10;
+      doc.text('Summary:', 20, y);
+      y += 10;
+      doc.text(`Total Revenue: ₹${data.summary.totalRevenue.toLocaleString()}`, 30, y);
+      y += 10;
+      doc.text(`Total Expenses: ₹${data.summary.totalExpenses.toLocaleString()}`, 30, y);
+      y += 10;
+      doc.text(`Profit Margin: ${data.summary.profitMargin.toFixed(2)}%`, 30, y);
+      
+      doc.save('performance_report.pdf');
+    }
+
+    function exportToExcel(data) {
+      const wb = XLSX.utils.book_new();
+      
+      const productsWS = XLSX.utils.json_to_sheet(data.products);
+      const expensesWS = XLSX.utils.json_to_sheet(data.expenses);
+      const summaryWS = XLSX.utils.json_to_sheet([data.summary]);
+      
+      XLSX.utils.book_append_sheet(wb, productsWS, "Products");
+      XLSX.utils.book_append_sheet(wb, expensesWS, "Expenses");
+      XLSX.utils.book_append_sheet(wb, summaryWS, "Summary");
+      
+      XLSX.writeFile(wb, "performance_report.xlsx");
+    }
+
+    function downloadFile(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function addAnnotation(chartId) {
+      const chart = charts[chartId];
+      if (chart) {
+        const data = chart.data.datasets[0].data;
+        const average = data.reduce((a, b) => a + b, 0) / data.length;
+        
+        chart.options.plugins.annotation = {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: 0,
+              xMax: chart.data.labels.length - 1,
+              yMin: average,
+              borderColor: 'rgba(255, 99, 132, 0.5)',
+              borderWidth: 2,
+              label: {
+                content: 'Average',
+                position: 'end'
+              }
+            }
+          }
+        };
+        chart.update();
+      }
+    }
+
+    function clearAnnotations(chartId) {
+      const chart = charts[chartId];
+      if (chart) {
+        chart.options.plugins.annotation = { annotations: {} };
+        chart.update();
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeData();
+      initializeCharts();
+      updateMetrics();
+      setupPreferenceListeners();
+    });
+  </script>
+</body>
+</html>
